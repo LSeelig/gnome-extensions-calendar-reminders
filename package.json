@@ -1,0 +1,21 @@
+{
+	"name": "calendar-reminders",
+	"version": "1.0.0",
+	"description": "A GNOME Shell extension that replaces the Evolution Reminders window with native notifications that open GNOME Calendar.",
+	"type": "module",
+	"private": false,
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/donnybeelo/gnome-extensions-calendar-reminders.git"
+	},
+	"author": "Daniel Elia <d.elia@outlook.com>",
+	"bugs": {
+		"url": "https://github.com/donnybeelo/gnome-extensions-calendar-reminders/issues"
+	},
+	"homepage": "https://github.com/donnybeelo/gnome-extensions-calendar-reminders#readme",
+	"devDependencies": {
+		"@girs/gjs": "^4.0.0-beta.36",
+		"@girs/gnome-shell": "^50",
+		"typescript": "^5.9.2"
+	}
+}

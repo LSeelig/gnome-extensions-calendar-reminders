@@ -42,8 +42,6 @@ export default class CalendarRemindersExtension extends Extension {
 	private _source: MessageTray.Source | null = null;
 	private _seen = new Set<string>();
 	private _timeouts = new Set<number>();
-	private _signals: [Gio.Settings | MessageTray.Source | MessageTray.Notification, number][] = [];
-	private _changedId = 0;
 	private _hadDisplay = true;
 
 	enable(): void {
@@ -59,14 +57,15 @@ export default class CalendarRemindersExtension extends Extension {
 		this._settings = new Gio.Settings({ schema_id: EDS_SCHEMA });
 		this._seen = new Set();
 		this._timeouts = new Set();
-		this._signals = [];
 
 		// Silence the Evolution Reminders window; restored on disable().
 		this._hadDisplay = this._settings.get_boolean(DISPLAY_KEY);
 		this._settings.set_boolean(DISPLAY_KEY, false);
 
-		this._changedId = this._settings.connect(`changed::${PAST_KEY}`, () =>
-			this._onRemindersChanged(),
+		this._settings.connectObject(
+			`changed::${PAST_KEY}`,
+			() => this._onRemindersChanged(),
+			this,
 		);
 		this._onRemindersChanged();
 	}
@@ -75,14 +74,8 @@ export default class CalendarRemindersExtension extends Extension {
 		for (const id of this._timeouts) GLib.Source.remove(id);
 		this._timeouts.clear();
 
-		for (const [obj, id] of this._signals) obj.disconnect(id);
-		this._signals = [];
-
-		if (this._changedId) {
-			this._settings?.disconnect(this._changedId);
-			this._changedId = 0;
-		}
 		if (this._settings) {
+			this._settings.disconnectObject(this);
 			this._settings.set_boolean(DISPLAY_KEY, this._hadDisplay);
 			this._settings = null;
 		}
@@ -120,13 +113,16 @@ export default class CalendarRemindersExtension extends Extension {
 		settings.set_strv(PAST_KEY, []);
 	}
 
+	/* The tray destroys an idle source on its own, and a destroyed Source stays a
+	 * live JS object that throws on use — so ask the tray whether ours is still
+	 * registered rather than trusting a cached reference. A "destroy" handler
+	 * cannot do this job: connectObject's tracker disconnects it first. */
 	private _ensureSource(): MessageTray.Source {
-		if (!this._source) {
+		if (!this._source || !Main.messageTray.getSources().includes(this._source)) {
 			this._source = new MessageTray.Source({
 				title: _("Calendar"),
 				iconName: "org.gnome.Calendar",
 			});
-			this._track(this._source, this._source.connect("destroy", () => (this._source = null)));
 			Main.messageTray.add(this._source);
 		}
 		return this._source;
@@ -142,9 +138,12 @@ export default class CalendarRemindersExtension extends Extension {
 			urgency: MessageTray.Urgency.HIGH,
 		});
 
-		this._track(
-			notification,
-			notification.connect("activated", () => this._openCalendar(reminder)),
+		/* connectObject ties the handler to this extension object; the tracker
+		 * drops it when either side is destroyed, and disable() sweeps the rest. */
+		notification.connectObject(
+			"activated",
+			() => this._openCalendar(reminder),
+			this,
 		);
 		notification.addAction(_("Open in Calendar"), () =>
 			this._openCalendar(reminder),
@@ -158,10 +157,6 @@ export default class CalendarRemindersExtension extends Extension {
 
 	private _snooze(reminder: Reminder): void {
 		this._later(SNOOZE_SECS, () => this._notify(reminder));
-	}
-
-	private _track(obj: (typeof this._signals)[0][0], id: number): void {
-		this._signals.push([obj, id]);
 	}
 
 	private _later(secs: number, fn: () => void): void {

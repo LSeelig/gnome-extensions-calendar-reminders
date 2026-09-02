@@ -131,10 +131,6 @@ export default class CalendarRemindersExtension extends Extension {
 				iconName: "org.gnome.Calendar",
 			});
 			Main.messageTray.add(this._source);
-			this._sourceDestroyId = this._source.connect("destroy", () => {
-				this._sourceDestroyId = 0;
-				this._source = null;
-			});
 		}
 		return this._source;
 	}

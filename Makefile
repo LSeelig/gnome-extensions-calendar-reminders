@@ -16,7 +16,7 @@ dist/extension.js: node_modules extension.ts parser.ts prefs.ts schemas/*.gschem
 
 $(NAME).zip: dist/extension.js
 	@cp metadata.json dist/
-	@(cd dist && zip ../$(NAME).zip -9r .)
+	@(cd dist && zip ../$(NAME).zip -9r . -x schemas/gschemas.compiled)
 
 pack: $(NAME).zip
 

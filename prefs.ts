@@ -12,7 +12,7 @@ import {
 } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 export default class CalendarRemindersPrefs extends ExtensionPreferences {
-	getPreferencesWidget(): Gtk.Widget {
+	async fillPreferencesWindow(window: Adw.PreferencesWindow): Promise<void> {
 		const row = new Adw.SpinRow({
 			title: _("Snooze length"),
 			subtitle: _("Minutes before a snoozed reminder fires again"),
@@ -29,6 +29,6 @@ export default class CalendarRemindersPrefs extends ExtensionPreferences {
 		group.add(row);
 		const page = new Adw.PreferencesPage();
 		page.add(group);
-		return page;
+		window.add(page);
 	}
 }

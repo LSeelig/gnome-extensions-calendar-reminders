@@ -41,6 +41,7 @@ export default class CalendarRemindersExtension extends Extension {
 	private _settings: Gio.Settings | null = null;
 	private _prefs: Gio.Settings | null = null;
 	private _source: MessageTray.Source | null = null;
+	private _sourceDestroyId = 0;
 	private _seen = new Set<string>();
 	private _notifications = new Map<string, MessageTray.Notification>();
 	private _timeouts = new Set<number>();
@@ -85,6 +86,10 @@ export default class CalendarRemindersExtension extends Extension {
 		}
 
 		this._prefs = null;
+		if (this._sourceDestroyId) {
+			this._source?.disconnect(this._sourceDestroyId);
+			this._sourceDestroyId = 0;
+		}
 		this._source?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
 		this._source = null;
 		this._seen.clear();
@@ -119,10 +124,6 @@ export default class CalendarRemindersExtension extends Extension {
 		settings.set_strv(PAST_KEY, []);
 	}
 
-	/* The tray destroys an idle source on its own, and a destroyed Source stays a
-	 * live JS object that throws on use — so ask the tray whether ours is still
-	 * registered rather than trusting a cached reference. A "destroy" handler
-	 * cannot do this job: connectObject's tracker disconnects it first. */
 	private _ensureSource(): MessageTray.Source {
 		if (!this._source || !Main.messageTray.getSources().includes(this._source)) {
 			this._source = new MessageTray.Source({
@@ -130,6 +131,10 @@ export default class CalendarRemindersExtension extends Extension {
 				iconName: "org.gnome.Calendar",
 			});
 			Main.messageTray.add(this._source);
+			this._sourceDestroyId = this._source.connect("destroy", () => {
+				this._sourceDestroyId = 0;
+				this._source = null;
+			});
 		}
 		return this._source;
 	}
@@ -160,11 +165,11 @@ export default class CalendarRemindersExtension extends Extension {
 
 		const source = this._ensureSource();
 		const previous = this._notifications.get(reminder.uuid);
-		if (previous && source.notifications.includes(previous))
-			previous.destroy(MessageTray.NotificationDestroyedReason.REPLACED);
 		this._notifications.set(reminder.uuid, notification);
 
 		source.addNotification(notification);
+		if (previous && source.notifications.includes(previous))
+			previous.destroy(MessageTray.NotificationDestroyedReason.REPLACED);
 	}
 
 	private _snooze(reminder: Reminder): void {

@@ -41,6 +41,7 @@ export default class CalendarRemindersExtension extends Extension {
 	private _settings: Gio.Settings | null = null;
 	private _source: MessageTray.Source | null = null;
 	private _seen = new Set<string>();
+	private _notifications = new Map<string, MessageTray.Notification>();
 	private _timeouts = new Set<number>();
 	private _hadDisplay = true;
 
@@ -56,6 +57,7 @@ export default class CalendarRemindersExtension extends Extension {
 
 		this._settings = new Gio.Settings({ schema_id: EDS_SCHEMA });
 		this._seen = new Set();
+		this._notifications = new Map();
 		this._timeouts = new Set();
 
 		// Silence the Evolution Reminders window; restored on disable().
@@ -83,6 +85,7 @@ export default class CalendarRemindersExtension extends Extension {
 		this._source?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
 		this._source = null;
 		this._seen.clear();
+		this._notifications.clear();
 	}
 
 	private _onRemindersChanged(): void {
@@ -152,7 +155,13 @@ export default class CalendarRemindersExtension extends Extension {
 			notification.addAction(_("Join"), () => this._openUri(reminder.join));
 		notification.addAction(_("Snooze"), () => this._snooze(reminder));
 
-		this._ensureSource().addNotification(notification);
+		const source = this._ensureSource();
+		const previous = this._notifications.get(reminder.uuid);
+		if (previous && source.notifications.includes(previous))
+			previous.destroy(MessageTray.NotificationDestroyedReason.REPLACED);
+		this._notifications.set(reminder.uuid, notification);
+
+		source.addNotification(notification);
 	}
 
 	private _snooze(reminder: Reminder): void {

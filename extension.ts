@@ -25,7 +25,7 @@ const DISPLAY_KEY = "notify-enable-display";
  * up to reminders-past-days (7) of missed reminders, and replaying a week of
  * them at login is a notification storm. */
 const STALE_SECS = 3600;
-const SNOOZE_SECS = 600;
+const SNOOZE_KEY = "snooze-minutes";
 
 /* @girs resolves two copies of Gio — one under @girs/gnome-shell, one under
  * @girs/meta — so the context this returns does not typecheck against
@@ -39,6 +39,7 @@ function launchContext(): Gio.AppLaunchContext {
 
 export default class CalendarRemindersExtension extends Extension {
 	private _settings: Gio.Settings | null = null;
+	private _prefs: Gio.Settings | null = null;
 	private _source: MessageTray.Source | null = null;
 	private _seen = new Set<string>();
 	private _notifications = new Map<string, MessageTray.Notification>();
@@ -56,6 +57,7 @@ export default class CalendarRemindersExtension extends Extension {
 		}
 
 		this._settings = new Gio.Settings({ schema_id: EDS_SCHEMA });
+		this._prefs = this.getSettings();
 		this._seen = new Set();
 		this._notifications = new Map();
 		this._timeouts = new Set();
@@ -82,6 +84,7 @@ export default class CalendarRemindersExtension extends Extension {
 			this._settings = null;
 		}
 
+		this._prefs = null;
 		this._source?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
 		this._source = null;
 		this._seen.clear();
@@ -165,7 +168,9 @@ export default class CalendarRemindersExtension extends Extension {
 	}
 
 	private _snooze(reminder: Reminder): void {
-		this._later(SNOOZE_SECS, () => this._notify(reminder));
+		// Read on each snooze so a preference change applies without a reload.
+		const mins = this._prefs?.get_int(SNOOZE_KEY) ?? 10;
+		this._later(mins * 60, () => this._notify(reminder));
 	}
 
 	private _later(secs: number, fn: () => void): void {

@@ -47,9 +47,7 @@ Reminders window, and restores the previous value when disabled.
 
 ## Notes
 
-- Reminders that came due more than an hour ago are cleared without notifying.
-  `reminders-past` holds up to `reminders-past-days` (7) of missed reminders, and
-  replaying a week of them at login is a notification storm.
+- Missed reminders are still shown at login, unless the event has already ended.
 - Snooze is in-memory: it does not survive a logout or disabling the extension.
 - Meeting links are read from `LOCATION` (any URL) and from `DESCRIPTION` (known
   conferencing hosts only, so that unsubscribe links are not mistaken for

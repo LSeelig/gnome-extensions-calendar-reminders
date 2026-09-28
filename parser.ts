@@ -14,6 +14,7 @@ export interface Reminder {
 	summary: string;
 	trigger: number;
 	start: number;
+	end: number;
 	join: string;
 }
 
@@ -35,7 +36,7 @@ export function parseReminder(entry: string): Reminder | null {
 	const parts = entry.split("\n");
 	if (parts.length < 6) return null;
 
-	const [sourceUid, alarmUid, trigger, start] = parts;
+	const [sourceUid, alarmUid, trigger, start, end] = parts;
 	/* ICS folds long lines at 75 octets with a leading space or tab, which
 	 * splits exactly the long meeting URLs we want to find. Unfold first. */
 	const ics = parts.slice(5).join("\n").replace(/\r?\n[ \t]/g, "");
@@ -54,6 +55,7 @@ export function parseReminder(entry: string): Reminder | null {
 		summary: unescape(field("SUMMARY")).trim(),
 		trigger: Number.parseInt(trigger, 10),
 		start: Number.parseInt(start, 10),
+		end: Number.parseInt(end, 10),
 		join: meetingUri(unescape(field("LOCATION")), unescape(field("DESCRIPTION"))),
 	};
 }

@@ -21,10 +21,6 @@ const EDS_SCHEMA = "org.gnome.evolution-data-server.calendar";
 const PAST_KEY = "reminders-past";
 const DISPLAY_KEY = "notify-enable-display";
 
-/* Reminders older than this are cleared without notifying. reminders-past keeps
- * up to reminders-past-days (7) of missed reminders, and replaying a week of
- * them at login is a notification storm. */
-const STALE_SECS = 3600;
 const SNOOZE_KEY = "snooze-minutes";
 
 /* @girs resolves two copies of Gio — one under @girs/gnome-shell, one under
@@ -43,6 +39,7 @@ export default class CalendarRemindersExtension extends Extension {
 	private _source: MessageTray.Source | null = null;
 	private _sourceDestroyId = 0;
 	private _seen = new Set<string>();
+	private _dueScheduled = new Set<string>();
 	private _notifications = new Map<string, MessageTray.Notification>();
 	private _timeouts = new Set<number>();
 	private _hadDisplay = true;
@@ -60,6 +57,7 @@ export default class CalendarRemindersExtension extends Extension {
 		this._settings = new Gio.Settings({ schema_id: EDS_SCHEMA });
 		this._prefs = this.getSettings();
 		this._seen = new Set();
+		this._dueScheduled = new Set();
 		this._notifications = new Map();
 		this._timeouts = new Set();
 
@@ -93,6 +91,7 @@ export default class CalendarRemindersExtension extends Extension {
 		this._source?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
 		this._source = null;
 		this._seen.clear();
+		this._dueScheduled.clear();
 		this._notifications.clear();
 	}
 
@@ -109,13 +108,16 @@ export default class CalendarRemindersExtension extends Extension {
 			if (!reminder || this._seen.has(reminder.id)) continue;
 
 			this._seen.add(reminder.id);
-			if (now - reminder.trigger > STALE_SECS) continue;
+			if (now >= reminder.end) continue;
 			this._notify(reminder);
 
 			/* EDS only writes reminders-past at the alarm trigger, so nothing
 			 * fires at the event itself. Schedule that one ourselves. */
-			if (reminder.start > now)
-				this._later(reminder.start - now, () => this._notify(reminder, true));
+			const dueKey = `${reminder.uuid}\n${reminder.start}`;
+			if (reminder.start > now && !this._dueScheduled.has(dueKey)) {
+				this._dueScheduled.add(dueKey);
+				this._later(reminder.start - now, () => this._notify(reminder));
+			}
 		}
 
 		/* Clearing the key is what stops reminders piling up in the Evolution
@@ -135,12 +137,12 @@ export default class CalendarRemindersExtension extends Extension {
 		return this._source;
 	}
 
-	private _notify(reminder: Reminder, due = false): void {
-		const start = GLib.DateTime.new_from_unix_local(reminder.start);
+	private _notify(reminder: Reminder): void {
+		const fmt = (t: number) => GLib.DateTime.new_from_unix_local(t).format("%H:%M");
 		const notification = new MessageTray.Notification({
 			source: this._ensureSource(),
-			title: due ? _("Starting now") : _("Reminder"),
-			body: `${reminder.summary || _("Calendar event")} — ${start.format("%H:%M")}`,
+			title: reminder.summary || _("Calendar event"),
+			body: `${fmt(reminder.start)} – ${fmt(reminder.end)}`,
 			iconName: "org.gnome.Calendar",
 			urgency: MessageTray.Urgency.HIGH,
 		});

@@ -61,6 +61,6 @@ assert(p.uuid === "2a5f4f5e0b5ab109e1a5e6e0c13dcebee305a5f7:real-event-uid",
 	"real entry uuid");
 assert(p.join === "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc",
 	"real entry join link");
-assert(p.trigger === 1787739600 && p.start === 1787740200, "real entry times");
+assert(p.trigger === 1787739600 && p.start === 1787740200 && p.end === 1787742000, "real entry times");
 
 print("all parse assertions passed");

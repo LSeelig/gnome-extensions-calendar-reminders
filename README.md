@@ -33,8 +33,9 @@ Shell's own launch context, so the window lands in front.
 
 `evolution-alarm-notify` keeps doing the timing. On every trigger it appends the
 reminder to the `reminders-past` GSettings key, independently of whether its own
-window is enabled. The extension watches that key, notifies, and clears it —
-which is also what stops reminders piling up.
+window is enabled. The extension watches that key and notifies. It keeps each
+entry until its event ends, so a reminder is shown again after logging back in,
+and then prunes it so the key does not pile up.
 
 While enabled it sets `notify-enable-display` to `false` to silence the Evolution
 Reminders window, and restores the previous value when disabled.

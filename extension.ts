@@ -103,12 +103,14 @@ export default class CalendarRemindersExtension extends Extension {
 		if (entries.length === 0) return;
 
 		const now = GLib.DateTime.new_now_local().to_unix();
+		const keep: string[] = [];
 		for (const entry of entries) {
 			const reminder = parseReminder(entry);
-			if (!reminder || this._seen.has(reminder.id)) continue;
+			if (!reminder || now >= reminder.end) continue;
+			keep.push(entry);
+			if (this._seen.has(reminder.id)) continue;
 
 			this._seen.add(reminder.id);
-			if (now >= reminder.end) continue;
 			this._notify(reminder);
 
 			/* EDS only writes reminders-past at the alarm trigger, so nothing
@@ -120,10 +122,8 @@ export default class CalendarRemindersExtension extends Extension {
 			}
 		}
 
-		/* Clearing the key is what stops reminders piling up in the Evolution
-		 * Reminders window. `_seen` guards against re-notifying if the daemon
-		 * ever writes the same entries back. */
-		settings.set_strv(PAST_KEY, []);
+		// Keep entries until their event ends, prune the rest.
+		if (keep.length !== entries.length) settings.set_strv(PAST_KEY, keep);
 	}
 
 	private _ensureSource(): MessageTray.Source {

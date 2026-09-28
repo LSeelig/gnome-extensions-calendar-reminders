@@ -20,6 +20,7 @@ import { parseReminder, type Reminder } from "./parser.js";
 const EDS_SCHEMA = "org.gnome.evolution-data-server.calendar";
 const PAST_KEY = "reminders-past";
 const DISPLAY_KEY = "notify-enable-display";
+const PAST_EVENTS_KEY = "notify-past-events";
 
 const SNOOZE_KEY = "snooze-minutes";
 
@@ -43,6 +44,7 @@ export default class CalendarRemindersExtension extends Extension {
 	private _notifications = new Map<string, MessageTray.Notification>();
 	private _timeouts = new Set<number>();
 	private _hadDisplay = true;
+	private _hadPastEvents = false;
 
 	enable(): void {
 		const schemas = Gio.SettingsSchemaSource.get_default();
@@ -64,6 +66,8 @@ export default class CalendarRemindersExtension extends Extension {
 		// Silence the Evolution Reminders window; restored on disable().
 		this._hadDisplay = this._settings.get_boolean(DISPLAY_KEY);
 		this._settings.set_boolean(DISPLAY_KEY, false);
+		this._hadPastEvents = this._settings.get_boolean(PAST_EVENTS_KEY);
+		this._settings.set_boolean(PAST_EVENTS_KEY, true);
 
 		this._settings.connectObject(
 			`changed::${PAST_KEY}`,
@@ -80,6 +84,7 @@ export default class CalendarRemindersExtension extends Extension {
 		if (this._settings) {
 			this._settings.disconnectObject(this);
 			this._settings.set_boolean(DISPLAY_KEY, this._hadDisplay);
+			this._settings.set_boolean(PAST_EVENTS_KEY, this._hadPastEvents);
 			this._settings = null;
 		}
 

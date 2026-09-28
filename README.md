@@ -38,7 +38,9 @@ entry until its event ends, so a reminder is shown again after logging back in,
 and then prunes it so the key does not pile up.
 
 While enabled it sets `notify-enable-display` to `false` to silence the Evolution
-Reminders window, and restores the previous value when disabled.
+Reminders window and `notify-past-events` to `true` so missed reminders are kept,
+and restores both previous values when disabled. Reminders for events that have
+already ended are dropped by the extension.
 
 ## Requirements
 

@@ -7,6 +7,8 @@
 
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
+import ECal from "gi://ECal";
+import EDataServer from "gi://EDataServer";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
@@ -23,6 +25,10 @@ const DISPLAY_KEY = "notify-enable-display";
 const PAST_EVENTS_KEY = "notify-past-events";
 
 const SNOOZE_KEY = "snooze-minutes";
+
+Gio._promisify(EDataServer.SourceRegistry, "new", "new_finish");
+Gio._promisify(ECal.Client, "connect", "connect_finish");
+Gio._promisify(ECal.Client.prototype, "get_object", "get_object_finish");
 
 /* @girs resolves two copies of Gio — one under @girs/gnome-shell, one under
  * @girs/meta — so the context this returns does not typecheck against
@@ -142,7 +148,42 @@ export default class CalendarRemindersExtension extends Extension {
 		return this._source;
 	}
 
-	private _notify(reminder: Reminder): void {
+	private async _notify(reminder: Reminder, tries = 5): Promise<void> {
+		const exists = await this._exists(reminder);
+		if (!this._settings) return;
+		if (exists === null && tries > 0)
+			this._later(30, () => this._notify(reminder, tries - 1));
+		else if (exists !== false) this._show(reminder);
+	}
+
+	private async _exists(reminder: Reminder): Promise<boolean | null> {
+		try {
+			const registry = await EDataServer.SourceRegistry.new(null);
+			const source = registry.ref_source(reminder.sourceUid);
+			if (!source) return null;
+			const client = await ECal.Client.connect(
+				source,
+				ECal.ClientSourceType.EVENTS,
+				30,
+				null,
+			);
+			await client.get_object(reminder.uid, null, null);
+			return true;
+		} catch (e) {
+			if (
+				e instanceof GLib.Error &&
+				e.matches(
+					GLib.quark_from_string("e-cal-client-error-quark"),
+					ECal.ClientError.OBJECT_NOT_FOUND,
+				)
+			)
+				return false;
+			console.warn(`${this.metadata.name}: cannot look up ${reminder.uid}: ${e}`);
+			return null;
+		}
+	}
+
+	private _show(reminder: Reminder): void {
 		const fmt = (t: number) => GLib.DateTime.new_from_unix_local(t).format("%H:%M");
 		const notification = new MessageTray.Notification({
 			source: this._ensureSource(),

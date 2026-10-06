@@ -11,6 +11,8 @@ const MEETING_HOSTS =
 export interface Reminder {
 	id: string;
 	uuid: string;
+	sourceUid: string;
+	uid: string;
 	summary: string;
 	trigger: number;
 	start: number;
@@ -52,6 +54,8 @@ export function parseReminder(entry: string): Reminder | null {
 	return {
 		id: `${sourceUid}\n${alarmUid}`,
 		uuid: `${sourceUid}:${field("UID").trim()}`,
+		sourceUid,
+		uid: field("UID").trim(),
 		summary: unescape(field("SUMMARY")).trim(),
 		trigger: Number.parseInt(trigger, 10),
 		start: Number.parseInt(start, 10),

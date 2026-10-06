@@ -5,6 +5,6 @@
     "name": "Calendar Reminders",
     "description": "Replaces the Evolution Reminders window with native GNOME notifications that open GNOME Calendar. Each triggered reminder becomes an ordinary notification with Open in Calendar, Join (when the event has a meeting link) and Snooze. Evolution Data Server keeps doing the timing; only its window is replaced.",
     "shell-version": ["46", "47", "48", "49", "50", "51"],
-    "version": 1,
+    "version": 999,
     "url": "https://github.com/donnybeelo/gnome-extensions-calendar-reminders"
 }

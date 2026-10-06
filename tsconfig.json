@@ -13,7 +13,8 @@
     "esModuleInterop": true
   },
   "include": [
-    "ambient.d.ts"
+    "ambient.d.ts",
+    "eds.d.ts"
   ],
   "files": [
     "extension.ts",

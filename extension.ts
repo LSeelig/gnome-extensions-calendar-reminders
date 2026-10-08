@@ -184,11 +184,20 @@ export default class CalendarRemindersExtension extends Extension {
 	}
 
 	private _show(reminder: Reminder): void {
-		const fmt = (t: number) => GLib.DateTime.new_from_unix_local(t).format("%H:%M");
+		const at = (t: number) => GLib.DateTime.new_from_unix_local(t);
+		const day = (d: GLib.DateTime) => d.format("%a %-e %b");
+		const time = (d: GLib.DateTime) => d.format("%H:%M");
+		const start = at(reminder.start);
+		const end = reminder.allDay ? at(reminder.end).add_days(-1)! : at(reminder.end);
+		const sameDay = start.format("%F") === end.format("%F");
+		const body = reminder.allDay
+			? sameDay ? _("All day") : `${day(start)} – ${day(end)}`
+			: sameDay ? `${time(start)} – ${time(end)}`
+			: `${day(start)} ${time(start)} – ${day(end)} ${time(end)}`;
 		const notification = new MessageTray.Notification({
 			source: this._ensureSource(),
 			title: reminder.summary || _("Calendar event"),
-			body: `${fmt(reminder.start)} – ${fmt(reminder.end)}`,
+			body,
 			iconName: "org.gnome.Calendar",
 			urgency: MessageTray.Urgency.HIGH,
 		});

@@ -17,8 +17,14 @@ export interface Reminder {
 	trigger: number;
 	start: number;
 	end: number;
+	allDay: boolean;
 	join: string;
 }
+
+const localMidnight = (utc: number): number => {
+	const d = new Date(utc * 1000);
+	return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).getTime() / 1000;
+};
 
 /* LOCATION wins and accepts any URL — a link put there was meant as the venue.
  * DESCRIPTION is only searched for known conferencing hosts, because taking the
@@ -51,6 +57,12 @@ export function parseReminder(entry: string): Reminder | null {
 	const unescape = (text: string): string =>
 		text.replace(/\\([,;\\])/g, "$1").replace(/\\n/g, " ");
 
+	const allDay = /^DTSTART[^:\n]*VALUE=DATE[;:]/m.test(ics);
+	const time = (t: string): number => {
+		const n = Number.parseInt(t, 10);
+		return allDay ? localMidnight(n) : n;
+	};
+
 	return {
 		id: `${sourceUid}\n${alarmUid}`,
 		uuid: `${sourceUid}:${field("UID").trim()}`,
@@ -58,8 +70,9 @@ export function parseReminder(entry: string): Reminder | null {
 		uid: field("UID").trim(),
 		summary: unescape(field("SUMMARY")).trim(),
 		trigger: Number.parseInt(trigger, 10),
-		start: Number.parseInt(start, 10),
-		end: Number.parseInt(end, 10),
+		start: time(start),
+		end: time(end),
+		allDay,
 		join: meetingUri(unescape(field("LOCATION")), unescape(field("DESCRIPTION"))),
 	};
 }

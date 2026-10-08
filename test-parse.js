@@ -63,4 +63,9 @@ assert(p.join === "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc",
 	"real entry join link");
 assert(p.trigger === 1787739600 && p.start === 1787740200 && p.end === 1787742000, "real entry times");
 
+const allDay = parseReminder(entry("DTSTART;VALUE=DATE:20261008\r\n", 0, 1791417600));
+assert(allDay.allDay, "all-day detected");
+assert(allDay.start === new Date(2026, 9, 8).getTime() / 1000, "all-day start is local midnight");
+assert(!parseReminder(entry("DTSTART:20261008T090000Z\r\n")).allDay, "timed is not all-day");
+
 print("all parse assertions passed");

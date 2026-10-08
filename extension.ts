@@ -215,6 +215,7 @@ export default class CalendarRemindersExtension extends Extension {
 		if (reminder.join)
 			notification.addAction(_("Join"), () => this._openUri(reminder.join));
 		notification.addAction(_("Snooze"), () => this._snooze(reminder));
+		notification.addAction(_("Dismiss"), () => this._dismiss(reminder));
 
 		const source = this._ensureSource();
 		const previous = this._notifications.get(reminder.uuid);
@@ -229,6 +230,16 @@ export default class CalendarRemindersExtension extends Extension {
 		// Read on each snooze so a preference change applies without a reload.
 		const mins = this._prefs?.get_int(SNOOZE_KEY) ?? 10;
 		this._later(mins * 60, () => this._notify(reminder));
+	}
+
+	private _dismiss(reminder: Reminder): void {
+		const settings = this._settings;
+		if (!settings) return;
+		const entries = settings.get_strv(PAST_KEY);
+		settings.set_strv(
+			PAST_KEY,
+			entries.filter((e) => parseReminder(e)?.uuid !== reminder.uuid),
+		);
 	}
 
 	private _later(secs: number, fn: () => void): void {
